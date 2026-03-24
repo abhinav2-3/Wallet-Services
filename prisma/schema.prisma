@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WalletType {
+  USER
+  SYSTEM
+}
+
+enum TransactionType {
+  TOP_UP
+  BONUS
+  SPEND
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum EntryType {
+  DEBIT
+  CREDIT
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  isSystem  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wallets Wallet[]
+
+  @@map("users")
+}
+
+model AssetType {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  symbol    String   @unique
+  createdAt DateTime @default(now())
+
+  wallets       Wallet[]
+  transactions  Transaction[]
+  ledgerEntries LedgerEntry[]
+
+  @@map("asset_types")
+}
+
+model Wallet {
+  id          String     @id @default(uuid())
+  userId      String
+  assetTypeId String
+  type        WalletType @default(USER)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id])
+  assetType AssetType @relation(fields: [assetTypeId], references: [id])
+
+  ledgerEntries        LedgerEntry[] @relation("WalletEntries")
+  counterLedgerEntries LedgerEntry[] @relation("CounterWalletEntries")
+
+  @@unique([userId, assetTypeId])
+  @@map("wallets")
+}
+
+model Transaction {
+  id              String            @id @default(uuid())
+  idempotencyKey  String            @unique
+  type            TransactionType
+  status          TransactionStatus @default(PENDING)
+  assetTypeId     String
+  amount          Decimal           @db.Decimal(20, 8)
+  initiatorUserId String
+  description     String?
+  metadata        Json?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  assetType     AssetType     @relation(fields: [assetTypeId], references: [id])
+  ledgerEntries LedgerEntry[]
+
+  @@index([initiatorUserId])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+model LedgerEntry {
+  id              String    @id @default(uuid())
+  transactionId   String
+  walletId        String
+  counterWalletId String
+  entryType       EntryType
+  assetTypeId     String
+  amount          Decimal   @db.Decimal(20, 8)
+  runningBalance  Decimal   @db.Decimal(20, 8)
+  createdAt       DateTime  @default(now())
+
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  assetType     AssetType   @relation(fields: [assetTypeId], references: [id])
+  wallet        Wallet      @relation("WalletEntries", fields: [walletId], references: [id])
+  counterWallet Wallet      @relation("CounterWalletEntries", fields: [counterWalletId], references: [id])
+
+  @@index([walletId])
+  @@index([transactionId])
+  @@index([createdAt])
+  @@map("ledger_entries")
+}

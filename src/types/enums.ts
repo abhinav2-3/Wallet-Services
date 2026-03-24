@@ -1,0 +1,32 @@
+export enum WalletType {
+  USER = "USER",
+  SYSTEM = "SYSTEM",
+}
+
+export enum TransactionType {
+  TOP_UP = "TOP_UP",
+  BONUS = "BONUS",
+  SPEND = "SPEND",
+}
+
+export enum TransactionStatus {
+  PENDING = "PENDING",
+  COMPLETED = "COMPLETED",
+  FAILED = "FAILED",
+}
+
+export enum EntryType {
+  DEBIT = "DEBIT",
+  CREDIT = "CREDIT",
+}
+
+export enum ErrorCode {
+  INSUFFICIENT_BALANCE = "INSUFFICIENT_BALANCE",
+  DUPLICATE_REQUEST = "DUPLICATE_REQUEST",
+  INVALID_INPUT = "INVALID_INPUT",
+  WALLET_NOT_FOUND = "WALLET_NOT_FOUND",
+  USER_NOT_FOUND = "USER_NOT_FOUND",
+  ASSET_NOT_FOUND = "ASSET_NOT_FOUND",
+  TRANSACTION_NOT_FOUND = "TRANSACTION_NOT_FOUND",
+  INTERNAL_ERROR = "INTERNAL_ERROR",
+}
