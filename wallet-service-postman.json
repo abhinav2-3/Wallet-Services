@@ -1,0 +1,498 @@
+{
+  "info": {
+    "name": "Wallet Service — Full Test Suite",
+    "_postman_id": "wallet-service-collection",
+    "description": "Complete API test suite for Internal Wallet Service. Run seed first to get IDs, then update the collection variables.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",      "value": "http://localhost:3000/api/v1" },
+    { "key": "aliceId",      "value": "PASTE_ALICE_USER_ID_FROM_SEED_OUTPUT" },
+    { "key": "bobId",        "value": "PASTE_BOB_USER_ID_FROM_SEED_OUTPUT" },
+    { "key": "assetTypeId",  "value": "PASTE_ASSET_TYPE_ID_FROM_SEED_OUTPUT" },
+    { "key": "txId",         "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0. Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:3000/health",
+            "description": "Verify server is running"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Get Balance",
+      "item": [
+        {
+          "name": "Get Alice Balance (500 GLD seeded)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/wallet/{{aliceId}}",
+            "description": "Should return 500 GLD"
+          }
+        },
+        {
+          "name": "Get Bob Balance (300 GLD seeded)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/wallet/{{bobId}}",
+            "description": "Should return 300 GLD"
+          }
+        },
+        {
+          "name": "[FAIL] Get Balance — Invalid UUID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/wallet/not-a-uuid",
+            "description": "Should return 404 USER_NOT_FOUND"
+          }
+        },
+        {
+          "name": "[FAIL] Get Balance — Non-existent User",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/wallet/00000000-0000-0000-0000-000000000000",
+            "description": "Should return 404 USER_NOT_FOUND"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Top-Up",
+      "item": [
+        {
+          "name": "Top-Up Alice — 100 GLD",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/top-up",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 100,\n  \"idempotencyKey\": \"topup-alice-001\",\n  \"description\": \"Purchased 100 Gold Coins\"\n}"
+            },
+            "description": "Alice balance should become 600 GLD"
+          }
+        },
+        {
+          "name": "Top-Up Bob — 200 GLD",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/top-up",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{bobId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 200,\n  \"idempotencyKey\": \"topup-bob-001\",\n  \"description\": \"Purchased 200 Gold Coins\"\n}"
+            },
+            "description": "Bob balance should become 500 GLD"
+          }
+        },
+        {
+          "name": "[IDEMPOTENCY] Top-Up Alice — Same Key Repeat",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/top-up",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 100,\n  \"idempotencyKey\": \"topup-alice-001\",\n  \"description\": \"Purchased 100 Gold Coins\"\n}"
+            },
+            "description": "Must return 200 with SAME transaction — balance must NOT change again"
+          }
+        },
+        {
+          "name": "[FAIL] Top-Up — Missing amount",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/top-up",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"idempotencyKey\": \"topup-alice-fail-001\"\n}"
+            },
+            "description": "Should return 400 INVALID_INPUT — amount required"
+          }
+        },
+        {
+          "name": "[FAIL] Top-Up — Negative amount",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/top-up",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": -50,\n  \"idempotencyKey\": \"topup-alice-fail-002\"\n}"
+            },
+            "description": "Should return 400 INVALID_INPUT — amount must be positive"
+          }
+        },
+        {
+          "name": "[FAIL] Top-Up — Zero amount",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/top-up",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 0,\n  \"idempotencyKey\": \"topup-alice-fail-003\"\n}"
+            },
+            "description": "Should return 400 INVALID_INPUT"
+          }
+        },
+        {
+          "name": "[FAIL] Top-Up — Invalid userId",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/top-up",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"not-a-uuid\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 100,\n  \"idempotencyKey\": \"topup-fail-004\"\n}"
+            },
+            "description": "Should return 400 INVALID_INPUT — invalid UUID"
+          }
+        },
+        {
+          "name": "[FAIL] Top-Up — Non-existent User",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/top-up",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"00000000-0000-0000-0000-000000000000\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 100,\n  \"idempotencyKey\": \"topup-fail-005\"\n}"
+            },
+            "description": "Should return 404 USER_NOT_FOUND"
+          }
+        },
+        {
+          "name": "[FAIL] Top-Up — Missing idempotencyKey",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/top-up",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 100\n}"
+            },
+            "description": "Should return 400 INVALID_INPUT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Bonus",
+      "item": [
+        {
+          "name": "Bonus Alice — 50 GLD Referral",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/bonus",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 50,\n  \"idempotencyKey\": \"bonus-alice-001\",\n  \"description\": \"Referral bonus\"\n}"
+            },
+            "description": "Alice gets 50 GLD free bonus"
+          }
+        },
+        {
+          "name": "Bonus Bob — 25 GLD Daily Reward",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/bonus",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{bobId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 25,\n  \"idempotencyKey\": \"bonus-bob-001\",\n  \"description\": \"Daily login reward\"\n}"
+            },
+            "description": "Bob gets 25 GLD daily reward"
+          }
+        },
+        {
+          "name": "[IDEMPOTENCY] Bonus Alice — Same Key Repeat",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/bonus",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 50,\n  \"idempotencyKey\": \"bonus-alice-001\",\n  \"description\": \"Referral bonus\"\n}"
+            },
+            "description": "Must return same transaction — balance must NOT change"
+          }
+        },
+        {
+          "name": "[FAIL] Bonus — Missing description is OK (optional)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/bonus",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 10,\n  \"idempotencyKey\": \"bonus-alice-no-desc-001\"\n}"
+            },
+            "description": "Should succeed — description is optional"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Spend",
+      "item": [
+        {
+          "name": "Spend Alice — 30 GLD (Buy Item)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/spend",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 30,\n  \"idempotencyKey\": \"spend-alice-001\",\n  \"description\": \"Bought magic sword\"\n}"
+            },
+            "description": "Alice spends 30 GLD"
+          }
+        },
+        {
+          "name": "Spend Bob — 100 GLD (Buy Item)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/spend",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{bobId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 100,\n  \"idempotencyKey\": \"spend-bob-001\",\n  \"description\": \"Bought shield\"\n}"
+            },
+            "description": "Bob spends 100 GLD"
+          }
+        },
+        {
+          "name": "[IDEMPOTENCY] Spend Alice — Same Key Repeat",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/spend",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 30,\n  \"idempotencyKey\": \"spend-alice-001\",\n  \"description\": \"Bought magic sword\"\n}"
+            },
+            "description": "Must return same transaction — balance must NOT be deducted again"
+          }
+        },
+        {
+          "name": "[FAIL] Spend — Insufficient Balance",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/spend",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{bobId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 999999,\n  \"idempotencyKey\": \"spend-bob-fail-001\",\n  \"description\": \"Try to buy everything\"\n}"
+            },
+            "description": "Should return 422 INSUFFICIENT_BALANCE with currentBalance and requiredAmount"
+          }
+        },
+        {
+          "name": "[FAIL] Spend — Exact Balance Edge Case",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/spend",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{bobId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 1,\n  \"idempotencyKey\": \"spend-bob-edge-001\",\n  \"description\": \"Spend 1 more than balance\"\n}"
+            },
+            "description": "Run this AFTER draining Bob to 0 — should return INSUFFICIENT_BALANCE"
+          }
+        },
+        {
+          "name": "Spend Alice — Drain Full Balance",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/spend",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 620,\n  \"idempotencyKey\": \"spend-alice-drain-001\",\n  \"description\": \"Spend entire balance\"\n}"
+            },
+            "description": "Spend full balance — Alice should reach 0. Adjust amount based on current balance from Get Balance"
+          }
+        },
+        {
+          "name": "[FAIL] Spend — After Drain (0 balance)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/spend",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 1,\n  \"idempotencyKey\": \"spend-alice-after-drain-001\",\n  \"description\": \"Try spend with 0 balance\"\n}"
+            },
+            "description": "Should return 422 INSUFFICIENT_BALANCE — balance is 0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Transactions",
+      "item": [
+        {
+          "name": "Get Alice All Transactions",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/transactions/user/{{aliceId}}",
+            "description": "Returns paginated list of all Alice transactions"
+          }
+        },
+        {
+          "name": "Get Alice TOP_UP Transactions Only",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/transactions/user/{{aliceId}}?type=TOP_UP",
+              "query": [{ "key": "type", "value": "TOP_UP" }]
+            },
+            "description": "Filter by transaction type"
+          }
+        },
+        {
+          "name": "Get Alice SPEND Transactions Only",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/transactions/user/{{aliceId}}?type=SPEND",
+              "query": [{ "key": "type", "value": "SPEND" }]
+            }
+          }
+        },
+        {
+          "name": "Get Alice BONUS Transactions Only",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/transactions/user/{{aliceId}}?type=BONUS",
+              "query": [{ "key": "type", "value": "BONUS" }]
+            }
+          }
+        },
+        {
+          "name": "Get Transactions — Pagination (limit=2, offset=0)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/transactions/user/{{aliceId}}?limit=2&offset=0",
+              "query": [
+                { "key": "limit", "value": "2" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Transactions — Pagination Page 2 (limit=2, offset=2)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/transactions/user/{{aliceId}}?limit=2&offset=2",
+              "query": [
+                { "key": "limit", "value": "2" },
+                { "key": "offset", "value": "2" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Transaction By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/transactions/{{txId}}",
+            "description": "Paste a transactionId from any previous response into txId variable"
+          }
+        },
+        {
+          "name": "[FAIL] Get Transaction — Non-existent ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/transactions/00000000-0000-0000-0000-000000000000",
+            "description": "Should return 404 TRANSACTION_NOT_FOUND"
+          }
+        },
+        {
+          "name": "[FAIL] Get User Transactions — Non-existent User",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/transactions/user/00000000-0000-0000-0000-000000000000",
+            "description": "Should return 404 USER_NOT_FOUND"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Full Flow",
+      "item": [
+        {
+          "name": "Step 1 — Get Alice Balance Before",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/wallet/{{aliceId}}"
+          }
+        },
+        {
+          "name": "Step 2 — Top-Up Alice 500 GLD",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/top-up",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 500,\n  \"idempotencyKey\": \"flow-topup-alice-001\",\n  \"description\": \"Full flow top-up\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Step 3 — Bonus Alice 100 GLD",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/bonus",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 100,\n  \"idempotencyKey\": \"flow-bonus-alice-001\",\n  \"description\": \"Full flow bonus\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Step 4 — Spend Alice 200 GLD",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wallet/spend",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{aliceId}}\",\n  \"assetTypeId\": \"{{assetTypeId}}\",\n  \"amount\": 200,\n  \"idempotencyKey\": \"flow-spend-alice-001\",\n  \"description\": \"Full flow spend\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Step 5 — Get Alice Balance After (verify: before + 500 + 100 - 200)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/wallet/{{aliceId}}"
+          }
+        },
+        {
+          "name": "Step 6 — Get Alice Transactions (verify ledger)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/transactions/user/{{aliceId}}"
+          }
+        }
+      ]
+    }
+  ]
+}
