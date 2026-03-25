@@ -349,3 +349,29 @@ After running the seed:
 | `PORT`         | ❌       | `3000`        | HTTP port                    |
 | `NODE_ENV`     | ❌       | `development` | Environment                  |
 | `LOG_LEVEL`    | ❌       | `info`        | Pino log level               |
+
+## Seeded Data (Test Purpose Only)
+
+Use the following pre-seeded IDs to test the system:
+
+- **System User ID**: `40abce7b-d771-4f33-b0a5-a4411d5d1cbb`  
+- **System Wallet ID**: `08b2b2e1-e1cc-4fe8-b717-492a0145531f`  
+
+- **Alice User ID**: `0385990e-6c73-4429-88fa-5788b2b17bf4`  
+- **Alice Wallet ID**: `cb0a3b0b-f142-447f-8a74-6b64cee555cc`  
+
+- **Bob User ID**: `563b0259-9d7f-4222-9a1d-f0841cffc713`  
+- **Bob Wallet ID**: `48df8d38-78cf-4b80-adb9-150308f2f249`  
+
+- **Asset (GLD) ID**: `3f593432-8fbd-4786-a975-8246f7db81ba`  
+
+
+## Postman Collection
+
+A ready-to-use Postman collection is available in the **root directory** of this project.
+
+### Steps to Use
+
+1. Import the collection into Postman  
+2. Configure required variables using the seeded data above  
+3. Set the Base URL : https://wallet-services-560b.onrender.com/api/v1
